@@ -1,0 +1,7 @@
+# Dependencias para Raspberry Pi Zero 2 W (Raspberry Pi OS Bullseye o Bookworm)
+fastapi>=0.110.0
+uvicorn[standard]>=0.28.0
+numpy>=1.24.0
+opencv-python-headless>=4.8.0
+gpiozero>=2.0
+# Nota: picamera2 ya viene preinstalada en Raspberry Pi OS Bookworm / Bullseye (o se instala vía apt: sudo apt install python3-picamera2)

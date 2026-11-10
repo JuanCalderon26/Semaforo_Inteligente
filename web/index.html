@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Centro de Control - Semáforo Inteligente Adaptativo con Visión Artificial</title>
+    <meta name="description" content="Dashboard en tiempo real para control y trazabilidad de semáforos inteligentes adaptativos utilizando Raspberry Pi Zero 2 W con detección de vehículos de juguete.">
+    <!-- Google Fonts: Plus Jakarta Sans & JetBrains Mono -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- HEADER PRINCIPAL -->
+        <header class="app-header">
+            <div class="header-brand">
+                <div class="brand-icon">
+                    <span class="pulse-ring"></span>
+                    <span class="icon-core">🚦</span>
+                </div>
+                <div>
+                    <h1 class="brand-title">SMART TRAFFIC CONTROL</h1>
+                    <p class="brand-subtitle">Semáforo Adaptativo con Visión Artificial • Raspberry Pi Zero 2 W (Pi Cam v1.3)</p>
+                </div>
+            </div>
+
+            <div class="header-status-group">
+                <div class="status-chip" id="ws-status-chip">
+                    <span class="status-dot"></span>
+                    <span id="ws-status-text">CONECTANDO A CENTRAL...</span>
+                </div>
+                <div class="clock-chip">
+                    <span class="clock-icon">🕒</span>
+                    <span id="live-clock">--:--:--</span>
+                </div>
+                <button class="btn btn-secondary" id="btn-open-settings" title="Configurar IPs de las Cámaras / Nodos">
+                    ⚙️ Ajustes de Red
+                </button>
+            </div>
+        </header>
+
+        <!-- SECCIÓN PRINCIPAL: TELEMETRÍA Y SEMÁFOROS EN VIVO -->
+        <main class="dashboard-grid">
+            
+            <!-- PANEL DEL SEMÁFORO 1 -->
+            <section class="traffic-card" id="card-lane-1">
+                <div class="card-header">
+                    <div class="lane-tag">
+                        <span class="lane-num">01</span>
+                        <div>
+                            <h2>CARRIL 1</h2>
+                            <span class="lane-sub">Pi Zero 2 W • Pi Cam v1.3</span>
+                        </div>
+                    </div>
+                    <div class="vehicle-counter-badge" id="badge-count-lane-1">
+                        <span class="car-icon">🚗</span>
+                        <span class="count-value" id="val-cars-lane1">0</span>
+                        <span class="count-label">EN ESPERA</span>
+                    </div>
+                </div>
+
+                <div class="traffic-light-rig">
+                    <div class="light-fixture">
+                        <div class="visor"></div>
+                        <div class="led-bulb red" id="light-l1-red"></div>
+                        <div class="led-bulb yellow" id="light-l1-yellow"></div>
+                        <div class="led-bulb green" id="light-l1-green"></div>
+                    </div>
+                    <div class="light-status-label" id="status-l1-label">EN ROJO</div>
+                </div>
+            </section>
+
+            <!-- PANEL CENTRAL: CRONÓMETRO Y MÁQUINA DE ESTADOS -->
+            <section class="traffic-card center-stage">
+                <div class="stage-header">
+                    <span class="stage-tag">MÁQUINA DE ESTADOS ADAPTATIVA</span>
+                    <div class="simulation-switch-wrap">
+                        <label class="switch-label">Simulador Maqueta</label>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="toggle-sim">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Temporizador Circular Central -->
+                <div class="radial-timer-container">
+                    <svg class="radial-svg" viewBox="0 0 200 200">
+                        <circle class="radial-track" cx="100" cy="100" r="85"></circle>
+                        <circle class="radial-progress" id="timer-progress-bar" cx="100" cy="100" r="85"></circle>
+                    </svg>
+                    <div class="timer-center-content">
+                        <span class="timer-phase-title" id="timer-phase-name">CARRIL 1 VERDE</span>
+                        <span class="timer-digits" id="timer-remaining">15.0<small>s</small></span>
+                        <span class="timer-elapsed-text" id="timer-elapsed">Transcurrido: 0.0s / 15.0s</span>
+                    </div>
+                </div>
+
+                <!-- Notificador dinámico de regla de tráfico aplicada -->
+                <div class="rule-badge-box">
+                    <span class="rule-indicator" id="rule-status-badge">
+                        ⚡ REGLA ACTIVA: CICLO BASE 15s
+                    </span>
+                    <p class="rule-explanation" id="rule-explanation-text">
+                        Evaluando flujo vehicular al llegar a los 15s...
+                    </p>
+                </div>
+
+                <!-- Botones de Acción Global -->
+                <div class="control-actions-row">
+                    <button class="btn btn-warning" id="btn-force-change">
+                        ⏭️ Forzar Cambio Inmediato
+                    </button>
+                    <button class="btn btn-ghost" id="btn-toggle-pause">
+                        ⏸️ Pausar Temporizador
+                    </button>
+                </div>
+            </section>
+
+            <!-- PANEL DEL SEMÁFORO 2 -->
+            <section class="traffic-card" id="card-lane-2">
+                <div class="card-header">
+                    <div class="lane-tag">
+                        <span class="lane-num">02</span>
+                        <div>
+                            <h2>CARRIL 2</h2>
+                            <span class="lane-sub">Pi Zero 2 W • Pi Cam v1.3</span>
+                        </div>
+                    </div>
+                    <div class="vehicle-counter-badge" id="badge-count-lane-2">
+                        <span class="car-icon">🚗</span>
+                        <span class="count-value" id="val-cars-lane2">0</span>
+                        <span class="count-label">EN ESPERA</span>
+                    </div>
+                </div>
+
+                <div class="traffic-light-rig">
+                    <div class="light-fixture">
+                        <div class="visor"></div>
+                        <div class="led-bulb red" id="light-l2-red"></div>
+                        <div class="led-bulb yellow" id="light-l2-yellow"></div>
+                        <div class="led-bulb green" id="light-l2-green"></div>
+                    </div>
+                    <div class="light-status-label" id="status-l2-label">EN ROJO</div>
+                </div>
+            </section>
+        </main>
+
+        <!-- SECCIÓN DE CÁMARAS Y VISIÓN ARTIFICIAL -->
+        <section class="section-container">
+            <div class="section-title-bar">
+                <div class="title-left">
+                    <span class="icon-camera">📹</span>
+                    <h3>Transmisiones de Video en Vivo & Bounding Boxes</h3>
+                </div>
+                <div class="vision-mode-selector">
+                    <span class="selector-label">Motor de Visión:</span>
+                    <button class="btn-toggle-mode active" id="btn-mode-mog2" data-mode="mog2">
+                        🎯 Lazos Virtuales (MOG2)
+                    </button>
+                    <button class="btn-toggle-mode" id="btn-mode-yolo" data-mode="yolo">
+                        🧠 YOLOv8 Nano
+                    </button>
+                </div>
+            </div>
+
+            <div class="camera-stream-grid">
+                <!-- Feed Carril 1 -->
+                <div class="camera-card">
+                    <div class="camera-card-header">
+                        <span class="cam-title">CÁMARA CARRIL 1 (QVGA 320x240)</span>
+                        <span class="cam-live-indicator"><span class="blink-dot"></span> EN VIVO</span>
+                    </div>
+                    <div class="stream-viewport">
+                        <img id="stream-feed-1" src="/video_feed/lane1" alt="Stream en vivo Carril 1" loading="lazy">
+                        <div class="roi-overlay-tag">ROI Detección: 60-175px</div>
+                    </div>
+                    <div class="camera-footer">
+                        <span>Algoritmo: Detección de masa en zona de detención</span>
+                        <span class="resolution-tag">RGB565 -> JPEG</span>
+                    </div>
+                </div>
+
+                <!-- Feed Carril 2 -->
+                <div class="camera-card">
+                    <div class="camera-card-header">
+                        <span class="cam-title">CÁMARA CARRIL 2 (QVGA 320x240)</span>
+                        <span class="cam-live-indicator"><span class="blink-dot"></span> EN VIVO</span>
+                    </div>
+                    <div class="stream-viewport">
+                        <img id="stream-feed-2" src="/video_feed/lane2" alt="Stream en vivo Carril 2" loading="lazy">
+                        <div class="roi-overlay-tag">ROI Detección: 60-175px</div>
+                    </div>
+                    <div class="camera-footer">
+                        <span>Algoritmo: Detección de masa en zona de detención</span>
+                        <span class="resolution-tag">RGB565 -> JPEG</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECCIÓN DE TRAZABILIDAD Y MÉTRICAS HISTÓRICAS -->
+        <section class="section-container">
+            <div class="section-title-bar">
+                <div class="title-left">
+                    <span class="icon-metrics">📊</span>
+                    <h3>Trazabilidad de Cambios de Semáforo en Tiempo Real</h3>
+                </div>
+                <div class="history-actions">
+                    <button class="btn btn-secondary btn-sm" id="btn-download-csv">
+                        📥 Exportar CSV
+                    </button>
+                    <button class="btn btn-danger btn-sm" id="btn-clear-history">
+                        🗑️ Limpiar Historial
+                    </button>
+                </div>
+            </div>
+
+            <!-- KPIs Agregados -->
+            <div class="kpi-grid">
+                <div class="kpi-card">
+                    <span class="kpi-title">TOTAL CICLOS</span>
+                    <span class="kpi-number" id="kpi-total-cycles">0</span>
+                    <span class="kpi-sub">Transiciones ejecutadas</span>
+                </div>
+                <div class="kpi-card">
+                    <span class="kpi-title">DURACIÓN PROMEDIO</span>
+                    <span class="kpi-number" id="kpi-avg-duration">0.0<small>s</small></span>
+                    <span class="kpi-sub">Tiempo medio de luz verde</span>
+                </div>
+                <div class="kpi-card">
+                    <span class="kpi-title">EXTENSIÓN A 20s</span>
+                    <span class="kpi-number" id="kpi-ext-count">0</span>
+                    <span class="kpi-sub">Aplicadas por flujo < 2 autos</span>
+                </div>
+                <div class="kpi-card">
+                    <span class="kpi-title">CORTES A 5s</span>
+                    <span class="kpi-number" id="kpi-cut-count">0</span>
+                    <span class="kpi-sub">Por carril vacío</span>
+                </div>
+                <div class="kpi-card">
+                    <span class="kpi-title">AUTOS DESPACHADOS</span>
+                    <span class="kpi-number" id="kpi-cars-total">0</span>
+                    <span class="kpi-sub">Flujo vehicular acumulado</span>
+                </div>
+            </div>
+
+            <!-- Tabla de Trazabilidad -->
+            <div class="table-responsive">
+                <table class="trace-table" id="trace-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>HORA EXACTA</th>
+                            <th>CARRIL ACTIVO</th>
+                            <th>DURACIÓN REAL</th>
+                            <th>CAUSA DE LA TRANSICIÓN</th>
+                            <th>AUTOS C1</th>
+                            <th>AUTOS C2</th>
+                            <th>ESTADO</th>
+                        </tr>
+                    </thead>
+                    <tbody id="trace-table-body">
+                        <tr>
+                            <td colspan="8" class="text-center empty-state">Cargando registros de trazabilidad...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </div>
+
+    <!-- MODAL DE AJUSTES DE RED PARA LA RASPBERRY PI ZERO 2 W -->
+    <div class="modal-backdrop" id="settings-modal">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3>⚙️ Configuración de Hardware (Raspberry Pi Zero 2 W)</h3>
+                <button class="modal-close" id="btn-close-modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p class="modal-desc">
+                    Introduce las URLs de los endpoints para cada carril de la Raspberry Pi Zero 2 W (con Pi Cam v1.3 y Webcam USB).
+                </p>
+
+                <div class="form-group">
+                    <label for="input-url-lane1">URL Carril 1 (Pi Cam v1.3 CSI):</label>
+                    <input type="text" id="input-url-lane1" placeholder="ej. http://192.168.1.100:8000/lane1 o http://semaforo-central.local:8000/lane1">
+                    <small>Controlará los LEDs GPIO (17, 27, 22) y el stream de la cámara CSI v1.3.</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="input-url-lane2">URL Carril 2 (Webcam USB OTG):</label>
+                    <input type="text" id="input-url-lane2" placeholder="ej. http://192.168.1.100:8000/lane2 o http://semaforo-central.local:8000/lane2">
+                    <small>Controlará los LEDs GPIO (23, 24, 25) y el stream de la webcam USB.</small>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-ghost" id="btn-cancel-settings">Cancelar</button>
+                <button class="btn btn-primary" id="btn-save-settings">Guardar y Aplicar</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
